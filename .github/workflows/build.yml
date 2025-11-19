@@ -1,0 +1,97 @@
+name: Build Qt macOS Universal
+
+on:
+  workflow_dispatch:
+    inputs:
+      qt_ver:
+        description: "Qt Version"
+        required: true
+        default: "5.15.18"
+        type: string
+      prerelease:
+        description: "Release as Prerelease"
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  build-qt:
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          echo "QT_VER=${{ inputs.qt_ver }}" >> $GITHUB_ENV
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '14.1'
+      - name: check Xcode version
+        run: /usr/bin/xcodebuild -version
+
+      - name: Download Qt ${{ env.QT_VER }} source
+        run: |
+          curl -L -o qt-${{ env.QT_VER }}.tar.xz https://download.qt.io/archive/qt/5.15/${{ env.QT_VER }}/single/qt-everywhere-opensource-src-${{ env.QT_VER }}.tar.xz
+
+      - name: Extract Qt source
+        run: |
+          mkdir -p ${{ runner.temp }}/qt-src
+          tar -xJf qt-${{ env.QT_VER }}.tar.xz -C ${{ runner.temp }}/qt-src --strip-components=1
+
+      - name: Install dependencies
+        run: brew install perl pkg-config freetype harfbuzz
+
+      #########################################
+      # Build for universal
+      #########################################
+      - name: Configure Qt universal
+        run: |
+          cd ${{ runner.temp }}/qt-src
+          mkdir -p build-universal && cd build-universal
+          ../configure QMAKE_APPLE_DEVICE_ARCHS="x86_64 arm64" \
+            -prefix ${{ runner.temp }}/Qt${{ env.QT_VER }}/${{ env.QT_VER }}/clang_64 \
+            -release -optimize-size \
+            -opensource -confirm-license -nomake tests -nomake examples \
+            -no-openssl -securetransport \
+            -skip qtdoc -skip qtwebengine
+
+      - name: Build Qt universal
+        run: |
+          cd ${{ runner.temp }}/qt-src/build-universal
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Install Qt universal
+        run: |
+          cd ${{ runner.temp }}/qt-src/build-universal
+          make install
+
+      #########################################
+      # Archive Universal Qt
+      #########################################
+      - name: Archive Qt Universal
+        run: |
+          cd ${{ runner.temp }}
+          tar -czf qt-${{ env.QT_VER }}-macos-universal.tar.gz Qt${{ env.QT_VER }}
+
+      # - name: Upload Qt artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: qt-${{ env.QT_VER }}-macos-universal
+      #     path: ${{ runner.temp }}/qt-${{ env.QT_VER }}-macos-universal.tar.gz
+      - name: Upload Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: "1.0"
+          release_name: "1.0"
+          file: ${{ runner.temp }}/qt-${{ env.QT_VER }}-macos-universal.tar.gz
+          asset_name: qt-${{ env.QT_VER }}-macos-universal.tar.gz
+          overwrite: true
+          prerelease: ${{ inputs.prerelease }}
