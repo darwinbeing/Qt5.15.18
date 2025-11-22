@@ -17,6 +17,10 @@ on:
 jobs:
   build-qt:
     runs-on: macos-13
+    env:
+      QT_VERSION: "5.15.18"
+      QT_PREFIX: "${{ github.workspace }}/qt-universal"
+      DEPS_PREFIX: "${{ github.workspace }}/deps-universal"
 
     steps:
       - name: Checkout
@@ -36,6 +40,14 @@ jobs:
       - name: check Xcode version
         run: /usr/bin/xcodebuild -version
 
+      - name: Install dependencies
+        run: brew install perl pkg-config freetype harfbuzz
+
+      # - name: Build Universal Dependencies
+      #   run: |
+      #     chmod +x ./scripts/build_deps.sh
+      #     ./scripts/build_deps.sh "$DEPS_PREFIX"
+
       - name: Download Qt ${{ env.QT_VER }} source
         run: |
           curl -L -o qt-${{ env.QT_VER }}.tar.xz https://download.qt.io/archive/qt/5.15/${{ env.QT_VER }}/single/qt-everywhere-opensource-src-${{ env.QT_VER }}.tar.xz
@@ -44,9 +56,6 @@ jobs:
         run: |
           mkdir -p ${{ runner.temp }}/qt-src
           tar -xJf qt-${{ env.QT_VER }}.tar.xz -C ${{ runner.temp }}/qt-src --strip-components=1
-
-      - name: Install dependencies
-        run: brew install perl pkg-config freetype harfbuzz
 
       #########################################
       # Build for universal
