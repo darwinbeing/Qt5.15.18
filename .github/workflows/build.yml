@@ -51,7 +51,7 @@ jobs:
         with: { python-version: "3.10" }
       - uses: maxim-lobanov/setup-xcode@v1
         with: { xcode-version: "15.0.1" }
-      - run: brew install perl pkg-config freetype harfbuzz libiodbc
+      - run: brew install perl pkg-config freetype harfbuzz
 
       - name: Build universal dependencies (OpenSSL + libpq for the psql driver)
         run: |
@@ -63,6 +63,11 @@ jobs:
           curl -L -o qt.tar.xz "https://download.qt.io/archive/qt/5.15/${QT_VER}/single/qt-everywhere-opensource-src-${QT_VER}.tar.xz"
           mkdir -p ${{ runner.temp }}/qt-src
           tar -xJf qt.tar.xz -C ${{ runner.temp }}/qt-src --strip-components=1
+
+      - name: Patch source for modern clang
+        run: |
+          chmod +x scripts/patch_qt_src.sh
+          ./scripts/patch_qt_src.sh "${{ runner.temp }}/qt-src"
 
       - name: Configure / build / install
         run: |
@@ -116,6 +121,11 @@ jobs:
           curl -L -o qt.tar.xz "https://download.qt.io/archive/qt/5.15/${QT_VER}/single/qt-everywhere-opensource-src-${QT_VER}.tar.xz"
           mkdir -p ${{ runner.temp }}/qt-src
           tar -xJf qt.tar.xz -C ${{ runner.temp }}/qt-src --strip-components=1
+      - name: Patch source for modern clang
+        run: |
+          chmod +x scripts/patch_qt_src.sh
+          ./scripts/patch_qt_src.sh "${{ runner.temp }}/qt-src"
+
       - name: Configure / build / install
         run: |
           PREFIX="${{ runner.temp }}/Qt${QT_VER}/${QT_VER}/${SPEC}"
@@ -160,6 +170,11 @@ jobs:
           curl -L -o qt.tar.xz "https://download.qt.io/archive/qt/5.15/${QT_VER}/single/qt-everywhere-opensource-src-${QT_VER}.tar.xz"
           mkdir -p ${{ runner.temp }}/qt-src
           tar -xJf qt.tar.xz -C ${{ runner.temp }}/qt-src --strip-components=1
+      - name: Patch source for modern clang
+        run: |
+          chmod +x scripts/patch_qt_src.sh
+          ./scripts/patch_qt_src.sh "${{ runner.temp }}/qt-src"
+
       - name: Configure / build / install
         run: |
           PREFIX="${{ runner.temp }}/Qt${QT_VER}/${QT_VER}/${SPEC}"
@@ -207,6 +222,11 @@ jobs:
           curl -L -o qt.tar.xz "https://download.qt.io/archive/qt/5.15/${QT_VER}/single/qt-everywhere-opensource-src-${QT_VER}.tar.xz"
           mkdir -p ${{ runner.temp }}/qt-src
           tar -xJf qt.tar.xz -C ${{ runner.temp }}/qt-src --strip-components=1
+      - name: Patch source for modern clang
+        run: |
+          chmod +x scripts/patch_qt_src.sh
+          ./scripts/patch_qt_src.sh "${{ runner.temp }}/qt-src"
+
       - name: Configure / build / install
         run: |
           PREFIX="${{ runner.temp }}/Qt${QT_VER}/${QT_VER}/${SPEC}"

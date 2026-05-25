@@ -29,6 +29,7 @@ set -e
 OPENSSL_VERSION="1.1.1w"
 MYSQL_VERSION="8.0.39"
 PG_VERSION="14.7"
+IODBC_VERSION="3.52.16"
 
 DEPS_DIR="$PREFIX"
 OPENSSL_PREFIX="$PREFIX"
@@ -137,12 +138,37 @@ build_postgresql() {
 }
 
 #######################################
+# Build iODBC universal
+#
+# Homebrew's libiodbc bottle is single-arch (arm64 on Apple Silicon runners),
+# which fails Qt's ODBC link test for the x86_64 slice of a Universal build.
+# So we build a Universal iODBC ourselves, like libpq.
+#######################################
+build_iodbc() {
+    echo "==== Building iODBC universal ===="
+    cd "$DEPS_DIR"
+    if [ ! -d iodbc-src ]; then
+        curl -LO https://github.com/openlink/iODBC/releases/download/v$IODBC_VERSION/libiodbc-$IODBC_VERSION.tar.gz
+        tar xf libiodbc-$IODBC_VERSION.tar.gz
+        mv libiodbc-$IODBC_VERSION iodbc-src
+    fi
+    cd iodbc-src
+    make distclean 2>/dev/null || true
+    CFLAGS="-arch x86_64 -arch arm64" LDFLAGS="-arch x86_64 -arch arm64" \
+      ./configure --prefix="$PREFIX" --disable-gui
+    make -j$(sysctl -n hw.ncpu)
+    make install
+    echo "==== iODBC universal ready ($(lipo -archs "$PREFIX/lib/libiodbc.dylib" 2>/dev/null)) ===="
+}
+
+#######################################
 # Call all dependency builds
 #######################################
 build_deps() {
     build_openssl
     # build_mysql
     build_postgresql
+    build_iodbc
     echo "==== All dependencies built successfully ===="
     echo "OpenSSL: $OPENSSL_PREFIX"
     echo "MySQL: $MYSQL_PREFIX"

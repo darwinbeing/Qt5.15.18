@@ -49,17 +49,13 @@ fi
 case "${PLATFORM}" in
   macos-universal)
     # +arm64 is the one intentional difference vs. the official x86_64-only build.
-    # The official libqsqlodbc links Homebrew's keg-only iODBC, so point Qt at it.
-    ODBC_FLAGS=()
-    if IODBC_PREFIX=$(brew --prefix libiodbc 2>/dev/null); then
-      ODBC_FLAGS=( -I "${IODBC_PREFIX}/include" -L "${IODBC_PREFIX}/lib" )
-    fi
+    # Universal libpq AND universal iODBC both come from DEPS_PREFIX (build_deps.sh);
+    # Homebrew's iODBC is single-arch and fails the x86_64 link test for a fat build.
     EXTRA=(
       QMAKE_APPLE_DEVICE_ARCHS="x86_64 arm64"
       -securetransport
       -sql-sqlite -plugin-sql-odbc -plugin-sql-psql
       "${DEP_FLAGS[@]}"
-      "${ODBC_FLAGS[@]}"
     )
     ;;
   ios)
