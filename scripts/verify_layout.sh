@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
-# verify_layout.sh — confirm a self-built clang_64 has the SAME library set as
-# the official open-source installer, and that every Mach-O is truly Universal.
+# verify_layout.sh — confirm a self-built clang_64 CONTAINS at least the same
+# library set as the official open-source installer (superset allowed: a
+# from-source build of a newer version ships extra addon modules, and we bundle
+# dep dylibs next to plugins), and that QtCore is truly Universal.
 #
 # Usage: verify_layout.sh <clang_64_dir> [manifest]
 #
@@ -34,17 +36,23 @@ fi
 section() { awk -v s="[$1]" '$0==s{f=1;next} /^\[/{f=0} f&&NF{print}' "$MANIFEST"; }
 
 cmp_set() { # <label> <expected-list-file> <actual-list-file>
+  # Superset check: the build must CONTAIN everything the official install has.
+  # Extras are fine (we build a newer version from full source, plus we bundle
+  # dep dylibs next to plugins), so only a MISSING official item is a failure.
   local label="$1" exp="$2" act="$3"
-  local missing extra
+  local missing extra n
   missing=$(comm -23 "$exp" "$act" || true)
   extra=$(comm -13 "$exp" "$act" || true)
-  if [ -n "$missing" ] || [ -n "$extra" ]; then
-    echo "✗ ${label}: differs from official"
-    [ -n "$missing" ] && echo "    missing (official has, build lacks):" && echo "$missing" | sed 's/^/      /'
-    [ -n "$extra" ]   && echo "    extra   (build has, official lacks):"  && echo "$extra"   | sed 's/^/      /'
+  n=$(wc -l < "$exp" | tr -d ' ')
+  if [ -n "$missing" ]; then
+    echo "✗ ${label}: MISSING official items (build lacks what official ships):"
+    echo "$missing" | sed 's/^/      - /'
     fail=1
+  elif [ -n "$extra" ]; then
+    echo "✓ ${label}: contains all ${n} official items (+$(echo "$extra" | grep -c .) extra, OK)"
+    echo "$extra" | sed 's/^/      + /'
   else
-    echo "✓ ${label}: matches official ($(wc -l < "$exp" | tr -d ' ') items)"
+    echo "✓ ${label}: exact match (${n} items)"
   fi
 }
 
