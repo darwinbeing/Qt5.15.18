@@ -41,7 +41,7 @@ jobs:
   #############################################################################
   macos-universal:
     if: contains(inputs.platforms, 'macos-universal')
-    runs-on: macos-13
+    runs-on: macos-14
     env:
       SPEC: clang_64
       DEPS_PREFIX: ${{ github.workspace }}/deps-universal
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.10" }
       - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: "14.1" }
+        with: { xcode-version: "15.0.1" }
       - run: brew install perl pkg-config freetype harfbuzz libiodbc
 
       - name: Build universal dependencies (OpenSSL + libpq for the psql driver)
@@ -103,13 +103,13 @@ jobs:
   #############################################################################
   ios:
     if: contains(inputs.platforms, 'ios')
-    runs-on: macos-13
+    runs-on: macos-14
     env:
       SPEC: ios
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: "14.1" }
+        with: { xcode-version: "15.0.1" }
       - run: brew install perl
       - name: Download & extract Qt ${{ env.QT_VER }} source
         run: |
