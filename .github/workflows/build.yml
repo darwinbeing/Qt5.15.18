@@ -268,7 +268,12 @@ jobs:
       - name: Download & extract Qt source
         shell: pwsh
         run: |
-          curl -L -o qt.tar.xz "https://download.qt.io/archive/qt/5.15/$env:QT_VER/single/qt-everywhere-opensource-src-$env:QT_VER.tar.xz"
+          # Use curl.exe (not the IWR alias) with retry + timeouts so a stalled
+          # mirror connection fails fast instead of hanging the job forever.
+          curl.exe -L --fail --retry 5 --retry-connrefused --retry-delay 5 `
+            --connect-timeout 60 --max-time 2400 -o qt.tar.xz `
+            "https://download.qt.io/archive/qt/5.15/$env:QT_VER/single/qt-everywhere-opensource-src-$env:QT_VER.tar.xz"
+          if (-not (Test-Path qt.tar.xz)) { throw "download failed" }
           mkdir "$env:RUNNER_TEMP\qt-src"
           tar -xJf qt.tar.xz -C "$env:RUNNER_TEMP\qt-src" --strip-components=1
       - name: Configure / build / install
