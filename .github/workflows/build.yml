@@ -300,7 +300,7 @@ jobs:
           cd "%RUNNER_TEMP%\qt-src\build-windows"
           call ..\configure -prefix %PREFIX% -release -opensource -confirm-license ^
             -nomake examples -nomake tests -skip qtwebengine -no-sql-mysql ^
-            -sql-sqlite -plugin-sql-odbc -openssl-runtime -platform win32-msvc
+            -sql-sqlite -plugin-sql-odbc -schannel -platform win32-msvc
           nmake
           nmake install
       - name: Archive & upload
