@@ -265,17 +265,28 @@ jobs:
         run: choco install -y strawberryperl
       - uses: ilammy/msvc-dev-cmd@v1
         with: { arch: x64 }
-      - name: Download & extract Qt source
+      - name: Disable Defender real-time scan
+        shell: pwsh
+        run: Set-MpPreference -DisableRealtimeMonitoring $true
+        # Defender scans every extracted file; with Qt's ~100k-file source that
+        # turns a 3-min extraction into 20+ min. Disabling it is the fix.
+
+      - name: Download Qt source
         shell: pwsh
         run: |
-          # Use curl.exe (not the IWR alias) with retry + timeouts so a stalled
-          # mirror connection fails fast instead of hanging the job forever.
+          $url = "https://download.qt.io/archive/qt/5.15/$env:QT_VER/single/qt-everywhere-opensource-src-$env:QT_VER.tar.xz"
           curl.exe -L --fail --retry 5 --retry-connrefused --retry-delay 5 `
-            --connect-timeout 60 --max-time 2400 -o qt.tar.xz `
-            "https://download.qt.io/archive/qt/5.15/$env:QT_VER/single/qt-everywhere-opensource-src-$env:QT_VER.tar.xz"
-          if (-not (Test-Path qt.tar.xz)) { throw "download failed" }
-          mkdir "$env:RUNNER_TEMP\qt-src"
-          tar -xJf qt.tar.xz -C "$env:RUNNER_TEMP\qt-src" --strip-components=1
+            --connect-timeout 60 --max-time 1800 -o qt.tar.xz $url
+          $mb = [math]::Round((Get-Item qt.tar.xz).Length / 1MB)
+          Write-Host "Downloaded qt.tar.xz: $mb MB"
+          if ($mb -lt 500) { throw "download too small ($mb MB)" }
+
+      - name: Extract Qt source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\qt-src" | Out-Null
+          tar -xf qt.tar.xz -C "$env:RUNNER_TEMP\qt-src" --strip-components=1
+          Write-Host "Extracted to $env:RUNNER_TEMP\qt-src"
       - name: Configure / build / install
         shell: cmd
         run: |
