@@ -284,9 +284,14 @@ jobs:
       - name: Extract Qt source
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\qt-src" | Out-Null
-          tar -xf qt.tar.xz -C "$env:RUNNER_TEMP\qt-src" --strip-components=1
+          # Windows bsdtar stalls recreating the Qt source's symlinks (it can sit
+          # for 20+ min). 7-Zip (pre-installed) is fast and doesn't choke on them.
+          7z x qt.tar.xz -o"$env:RUNNER_TEMP" -y | Out-Null          # -> qt.tar
+          7z x "$env:RUNNER_TEMP\qt.tar" -o"$env:RUNNER_TEMP\qt-extract" -y | Out-Null
+          $inner = (Get-ChildItem "$env:RUNNER_TEMP\qt-extract" -Directory | Select-Object -First 1).FullName
+          Move-Item $inner "$env:RUNNER_TEMP\qt-src"
           Write-Host "Extracted to $env:RUNNER_TEMP\qt-src"
+          if (-not (Test-Path "$env:RUNNER_TEMP\qt-src\configure")) { throw "configure not found after extract" }
       - name: Configure / build / install
         shell: cmd
         run: |
